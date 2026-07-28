@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package students;
+
+// Contract the API gateway uses to talk to the students-service.
+service StudentsService {
+  rpc InitiateApplicationPayment (InitiatePaymentRequest) returns (InitiatePaymentResponse) {}
+  rpc CaptureApplicationPayment (CapturePaymentRequest) returns (CapturePaymentResponse) {}
+  rpc GetApplication (GetApplicationRequest) returns (ApplicationResponse) {}
+}
+
+message InitiatePaymentRequest {
+  int32 application_id = 1;
+  string domain = 2;       // frontend origin, e.g. http://localhost:3000
+  string coupon_code = 3;  // optional
+}
+
+message InitiatePaymentResponse {
+  int32 status = 1;
+  string message = 2;
+  string approve_url = 3;
+  string paypal_order_id = 4;
+  string payment_order_id = 5;
+}
+
+message CapturePaymentRequest {
+  int32 application_id = 1;
+  string paypal_order_id = 2;
+}
+
+message CapturePaymentResponse {
+  int32 status = 1;
+  string message = 2;
+  string application_status = 3;
+}
+
+message GetApplicationRequest {
+  int32 application_id = 1;
+}
+
+message ApplicationResponse {
+  int32 application_id = 1;
+  string student_id = 2;
+  string amount = 3;
+  string currency = 4;
+  string payment_status = 5;
+}

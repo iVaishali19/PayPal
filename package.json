@@ -1,0 +1,30 @@
+{
+  "name": "paypal-microservices",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PayPal in a microservice architecture using NestJS, gRPC, RabbitMQ and Docker",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev:infra": "docker compose up -d --wait postgres rabbitmq",
+    "dev:infra:down": "docker compose stop postgres rabbitmq",
+    "dev:payment": "npm run start:dev --workspace apps/payment-service",
+    "dev:students": "npm run start:dev --workspace apps/students-service",
+    "dev:gateway": "npm run start:dev --workspace apps/student-apigw",
+    "dev:services": "concurrently -n payment,students,gateway -c green,yellow,cyan \"npm run dev:payment\" \"npm run dev:students\" \"npm run dev:gateway\"",
+    "dev": "npm run dev:infra && npm run dev:services",
+    "docker:up": "docker compose up --build",
+    "start:payment": "npm run start --workspace apps/payment-service",
+    "start:students": "npm run start --workspace apps/students-service",
+    "start:gateway": "npm run start --workspace apps/student-apigw"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package payment;
+
+// The contract every service uses to talk to the payment-service.
+// Because it lives in one shared file, all services agree on the exact
+// request/response shapes regardless of who calls whom.
+service PaymentService {
+  rpc CreatePayment (CreatePaymentRequest) returns (CreatePaymentResponse) {}
+  rpc CapturePayment (CapturePaymentRequest) returns (CapturePaymentResponse) {}
+  rpc GetPaymentStatus (GetPaymentStatusRequest) returns (GetPaymentStatusResponse) {}
+}
+
+message CreatePaymentRequest {
+  string checkout_id = 1;
+  string payment_order_id = 2;
+  string domain = 3;        // e.g. "application", "subscription"
+  string reference_id = 4;  // business entity id (e.g. application id)
+  string payer_id = 5;
+  string amount = 6;
+  string currency = 7;
+  string buyer_email = 8;
+  string seller_account = 9;
+  string payment_category = 10;
+  string return_url = 11;   // PayPal redirect on success
+  string cancel_url = 12;   // PayPal redirect on cancel
+  string idempotency_key = 13;
+  string metadata = 14;
+  string description = 15;
+}
+
+message CreatePaymentResponse {
+  int32 status = 1;
+  string message = 2;
+  string payment_order_id = 3;
+  string paypal_order_id = 4;
+  string approve_url = 5;   // send the user here
+  string payment_order_status = 6;
+}
+
+message CapturePaymentRequest {
+  string payment_order_id = 1;
+  string paypal_order_id = 2;
+}
+
+message CapturePaymentResponse {
+  int32 status = 1;
+  string message = 2;
+  string payment_order_id = 3;
+  string paypal_order_id = 4;
+  string capture_id = 5;
+  string payment_order_status = 6;
+}
+
+message GetPaymentStatusRequest {
+  string payment_order_id = 1;
+}
+
+message GetPaymentStatusResponse {
+  int32 status = 1;
+  string payment_order_id = 2;
+  string payment_order_status = 3;
+  string amount = 4;
+  string currency = 5;
+}

@@ -1,0 +1,90 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-payment_db}
+      POSTGRES_USER: ${DB_USER:-payment_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-payment_pass}
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-payment_user} -d ${DB_NAME:-payment_db}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - '5672:5672'   # AMQP
+      - '15672:15672' # management UI (guest/guest)
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: apps/payment-service/Dockerfile
+    ports:
+      - '3003:3003'   # HTTP
+      - '50061:50061' # gRPC
+    environment:
+      - PAYPAL_API_BASE=${PAYPAL_API_BASE:-https://api-m.sandbox.paypal.com}
+      - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID}
+      - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-payment_db}
+      - DB_USER=${DB_USER:-payment_user}
+      - DB_PASSWORD=${DB_PASSWORD:-payment_pass}
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - PAYMENT_HTTP_PORT=3003
+      - PAYMENT_GRPC_PORT=50061
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3003/health']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  students-service:
+    build:
+      context: .
+      dockerfile: apps/students-service/Dockerfile
+    ports:
+      - '3004:3004'
+      - '50062:50062'
+    environment:
+      - PAYMENT_SERVICE_URL=payment-service:50061
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - STUDENTS_HTTP_PORT=3004
+      - STUDENTS_GRPC_PORT=50062
+    depends_on:
+      payment-service:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  student-apigw:
+    build:
+      context: .
+      dockerfile: apps/student-apigw/Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      - STUDENTS_SERVICE_URL=students-service:50062
+      - GATEWAY_PORT=3000
+    depends_on:
+      - students-service
+
+volumes:
+  pgdata:
